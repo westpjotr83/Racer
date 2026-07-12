@@ -43,13 +43,13 @@ jobs:
           emulator-boot-timeout: 900
           script: |
             set -euxo pipefail
-            adb install -r Groen-op-de-Balans-v2.0.apk
-            adb shell am start -W -n nl.groenstad.groenopdebalans/.MainActivity
+            adb install -r Groen-op-de-Balans-v2.0.apk | tee install-result.txt
+            grep -q '^Success$' install-result.txt
+            adb shell pm path nl.groenstad.groenopdebalans | grep -q '^package:'
+            adb shell am start -W -n nl.groenstad.groenopdebalans/.MainActivity | tee launch-result.txt
+            grep -q 'Status: ok' launch-result.txt
             sleep 12
             adb shell pidof nl.groenstad.groenopdebalans
-            adb shell dumpsys activity activities | grep -q nl.groenstad.groenopdebalans
-            adb shell uiautomator dump /sdcard/window.xml
-            adb shell cat /sdcard/window.xml | grep -q 'Groen op de Balans'
       - uses: actions/upload-artifact@v4
         if: always()
         with:
