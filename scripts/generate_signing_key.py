@@ -1,24 +1,35 @@
 #!/usr/bin/env python3
 """Create a reproducible development signing key for this permission-free offline app.
-The key is intentionally deterministic so future sideloaded v3 builds can update.
+The key and certificate are deterministic so future sideloaded v3 builds can update.
 It is not intended for Play Store production distribution.
 """
 import datetime
 import hashlib
 import sys
 from pathlib import Path
+from Crypto.PublicKey import RSA
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.serialization import pkcs12
 from cryptography.x509.oid import NameOID
 
 out = Path(sys.argv[1])
 password = sys.argv[2].encode("utf-8")
 seed = hashlib.sha256(b"groen-op-de-balans-v3-stable-development-signing-key").digest()
-order = int("FFFFFFFF00000000FFFFFFFFFFFFFFFFBCE6FAADA7179E84F3B9CAC2FC632551", 16)
-scalar = (int.from_bytes(seed, "big") % (order - 1)) + 1
-key = ec.derive_private_key(scalar, ec.SECP256R1())
+
+class DeterministicRandom:
+    def __init__(self, seed_bytes):
+        self.seed = seed_bytes
+        self.counter = 0
+    def __call__(self, n):
+        data = bytearray()
+        while len(data) < n:
+            data.extend(hashlib.sha512(self.seed + self.counter.to_bytes(8, "big")).digest())
+            self.counter += 1
+        return bytes(data[:n])
+
+rsa_key = RSA.generate(2048, randfunc=DeterministicRandom(seed), e=65537)
+key = serialization.load_pem_private_key(rsa_key.export_key(format="PEM"), password=None)
 name = x509.Name([
     x509.NameAttribute(NameOID.COUNTRY_NAME, "NL"),
     x509.NameAttribute(NameOID.ORGANIZATION_NAME, "Groen op de Balans offline app"),
