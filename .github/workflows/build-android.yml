@@ -1,0 +1,104 @@
+name: Build and install-test Android APK
+on:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+      - name: Download official source PDF
+        run: |
+          mkdir -p app/src/main/assets
+          curl -L --fail --retry 3 -o app/src/main/assets/groen_op_de_balans.pdf https://degroenestad.nl/wp-content/uploads/De-Groene-Stad-Groen-op-de-Balans.pdf
+          test $(stat -c%s app/src/main/assets/groen_op_de_balans.pdf) -gt 10000000
+          file app/src/main/assets/groen_op_de_balans.pdf | grep -q PDF
+      - name: Build release APK
+        run: gradle --no-daemon clean assembleRelease
+      - name: Verify APK
+        run: |
+          APK=app/build/outputs/apk/release/app-release.apk
+          test -f "$APK"
+          $ANDROID_HOME/build-tools/35.0.0/apksigner verify --verbose --print-certs "$APK" | tee signature-result.txt
+          $ANDROID_HOME/build-tools/35.0.0/aapt dump badging "$APK" | tee badging-result.txt
+          unzip -t "$APK" | tee zip-result.txt
+          cp "$APK" Groen-op-de-Balans-v2.0.apk
+      - name: Install and launch in Android emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 30
+          target: default
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          emulator-boot-timeout: 900
+          script: |
+            set +e
+            : > test-status.txt
+            echo "TEST_STARTED=$(date -u +%FT%TZ)" | tee -a test-status.txt
+            adb devices -l | tee devices.txt
+
+            adb install -r Groen-op-de-Balans-v2.0.apk > install-result.txt 2>&1
+            INSTALL_EXIT=$?
+            cat install-result.txt
+            echo "INSTALL_EXIT=$INSTALL_EXIT" | tee -a test-status.txt
+            grep -q 'Success' install-result.txt
+            INSTALL_SUCCESS=$?
+            echo "INSTALL_SUCCESS_MATCH=$INSTALL_SUCCESS" | tee -a test-status.txt
+
+            adb shell pm path nl.groenstad.groenopdebalans > package-result.txt 2>&1
+            PACKAGE_EXIT=$?
+            cat package-result.txt
+            grep -q '^package:' package-result.txt
+            PACKAGE_MATCH=$?
+            echo "PACKAGE_EXIT=$PACKAGE_EXIT" | tee -a test-status.txt
+            echo "PACKAGE_MATCH=$PACKAGE_MATCH" | tee -a test-status.txt
+
+            adb shell am start -W -n nl.groenstad.groenopdebalans/.MainActivity > launch-result.txt 2>&1
+            LAUNCH_EXIT=$?
+            cat launch-result.txt
+            grep -q 'Status: ok' launch-result.txt
+            LAUNCH_MATCH=$?
+            echo "LAUNCH_EXIT=$LAUNCH_EXIT" | tee -a test-status.txt
+            echo "LAUNCH_STATUS_MATCH=$LAUNCH_MATCH" | tee -a test-status.txt
+
+            sleep 15
+            adb shell pidof nl.groenstad.groenopdebalans > process-result.txt 2>&1
+            PROCESS_EXIT=$?
+            cat process-result.txt
+            test -s process-result.txt
+            PROCESS_PRESENT=$?
+            echo "PROCESS_EXIT=$PROCESS_EXIT" | tee -a test-status.txt
+            echo "PROCESS_PRESENT=$PROCESS_PRESENT" | tee -a test-status.txt
+
+            adb logcat -d > logcat.txt 2>&1
+            grep -E 'FATAL EXCEPTION|AndroidRuntime' logcat.txt > fatal-logcat.txt || true
+
+            if [ "$INSTALL_EXIT" -eq 0 ] && [ "$INSTALL_SUCCESS" -eq 0 ] && [ "$PACKAGE_EXIT" -eq 0 ] && [ "$PACKAGE_MATCH" -eq 0 ] && [ "$LAUNCH_EXIT" -eq 0 ] && [ "$LAUNCH_MATCH" -eq 0 ] && [ "$PROCESS_EXIT" -eq 0 ] && [ "$PROCESS_PRESENT" -eq 0 ]; then
+              echo 'RESULT=PASS' | tee -a test-status.txt
+              exit 0
+            else
+              echo 'RESULT=FAIL' | tee -a test-status.txt
+              exit 1
+            fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Groen-op-de-Balans-v2.0
+          path: |
+            Groen-op-de-Balans-v2.0.apk
+            *-result.txt
+            test-status.txt
+            devices.txt
+            logcat.txt
+            fatal-logcat.txt
+          retention-days: 7

@@ -1,2 +1,0 @@
-# Racer
-racinggame
