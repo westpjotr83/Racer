@@ -13,6 +13,11 @@ import android.view.ScaleGestureDetector;
 import android.view.View;
 
 public class PdfPageView extends View {
+    public interface PageSwipeListener {
+        void onNextPage();
+        void onPreviousPage();
+    }
+
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
     private Bitmap bitmap;
     private float scale = 1f;
@@ -20,6 +25,7 @@ public class PdfPageView extends View {
     private float offsetY = 0f;
     private final ScaleGestureDetector scaleDetector;
     private final GestureDetector gestureDetector;
+    private PageSwipeListener pageSwipeListener;
 
     public PdfPageView(Context context, AttributeSet attrs) {
         super(context, attrs);
@@ -34,6 +40,7 @@ public class PdfPageView extends View {
         });
         gestureDetector = new GestureDetector(context, new GestureDetector.SimpleOnGestureListener() {
             @Override public boolean onDown(MotionEvent e) { return true; }
+
             @Override public boolean onDoubleTap(MotionEvent e) {
                 scale = scale > 1.2f ? 1f : 2.5f;
                 if (scale == 1f) { offsetX = 0; offsetY = 0; }
@@ -41,8 +48,9 @@ public class PdfPageView extends View {
                 invalidate();
                 return true;
             }
+
             @Override public boolean onScroll(MotionEvent e1, MotionEvent e2, float dx, float dy) {
-                if (scale > 1f) {
+                if (scale > 1.02f) {
                     offsetX -= dx;
                     offsetY -= dy;
                     constrainOffsets();
@@ -51,20 +59,38 @@ public class PdfPageView extends View {
                 }
                 return false;
             }
+
+            @Override public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
+                if (scale > 1.02f || e1 == null || e2 == null || pageSwipeListener == null) return false;
+                float dx = e2.getX() - e1.getX();
+                float dy = Math.abs(e2.getY() - e1.getY());
+                if (Math.abs(dx) > 120 && Math.abs(velocityX) > 350 && Math.abs(dx) > dy * 1.4f) {
+                    if (dx < 0) pageSwipeListener.onNextPage();
+                    else pageSwipeListener.onPreviousPage();
+                    return true;
+                }
+                return false;
+            }
         });
+    }
+
+    public void setPageSwipeListener(PageSwipeListener listener) {
+        pageSwipeListener = listener;
     }
 
     public void setBitmap(Bitmap newBitmap) {
         if (bitmap != null && bitmap != newBitmap && !bitmap.isRecycled()) bitmap.recycle();
         bitmap = newBitmap;
-        scale = 1f; offsetX = 0f; offsetY = 0f;
+        scale = 1f;
+        offsetX = 0f;
+        offsetY = 0f;
         invalidate();
     }
 
     private RectF baseRect() {
         if (bitmap == null) return new RectF();
-        float availableW = getWidth() - getPaddingLeft() - getPaddingRight();
-        float availableH = getHeight() - getPaddingTop() - getPaddingBottom();
+        float availableW = Math.max(1, getWidth() - getPaddingLeft() - getPaddingRight());
+        float availableH = Math.max(1, getHeight() - getPaddingTop() - getPaddingBottom());
         float fit = Math.min(availableW / bitmap.getWidth(), availableH / bitmap.getHeight());
         float w = bitmap.getWidth() * fit;
         float h = bitmap.getHeight() * fit;
@@ -88,15 +114,16 @@ public class PdfPageView extends View {
         Matrix m = new Matrix();
         m.postTranslate(r.left, r.top);
         m.postScale(r.width() / bitmap.getWidth(), r.height() / bitmap.getHeight(), r.left, r.top);
-        float cx = getWidth() / 2f, cy = getHeight() / 2f;
+        float cx = getWidth() / 2f;
+        float cy = getHeight() / 2f;
         m.postScale(scale, scale, cx, cy);
         m.postTranslate(offsetX, offsetY);
         canvas.drawBitmap(bitmap, m, paint);
     }
 
     @Override public boolean onTouchEvent(MotionEvent event) {
-        boolean a = scaleDetector.onTouchEvent(event);
-        boolean b = gestureDetector.onTouchEvent(event);
-        return a || b || super.onTouchEvent(event);
+        scaleDetector.onTouchEvent(event);
+        gestureDetector.onTouchEvent(event);
+        return true;
     }
 }
