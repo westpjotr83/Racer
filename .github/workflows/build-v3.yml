@@ -1,0 +1,73 @@
+name: Build Groen op de Balans v3
+on:
+  push:
+    branches: [green-app-v3]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+      - name: Download official source PDF
+        run: |
+          mkdir -p app/src/main/assets
+          curl -L --fail --retry 3 -o app/src/main/assets/groen_op_de_balans.pdf https://degroenestad.nl/wp-content/uploads/De-Groene-Stad-Groen-op-de-Balans.pdf
+          test $(stat -c%s app/src/main/assets/groen_op_de_balans.pdf) -gt 10000000
+          file app/src/main/assets/groen_op_de_balans.pdf | grep -q PDF
+      - name: Generate and validate search index
+        run: |
+          python -m pip install --disable-pip-version-check pypdf==5.7.0 cryptography==45.0.5 pycryptodome==3.23.0
+          python scripts/build_search_index.py app/src/main/assets/groen_op_de_balans.pdf app/src/main/assets/search_index.json
+          python scripts/validate_content.py app/src/main/assets/groen_op_de_balans.pdf app/src/main/assets/search_index.json | tee content-validation.txt
+      - name: Build unsigned release APK
+        run: gradle --no-daemon clean assembleRelease
+      - name: Sign and validate APK
+        run: |
+          UNSIGNED=app/build/outputs/apk/release/app-release-unsigned.apk
+          test -f "$UNSIGNED"
+          python scripts/generate_signing_key.py stable-signing.p12 android
+          $ANDROID_HOME/build-tools/35.0.0/zipalign -f -p 4 "$UNSIGNED" aligned.apk
+          $ANDROID_HOME/build-tools/35.0.0/apksigner sign --ks stable-signing.p12 --ks-type PKCS12 --ks-key-alias groenbalans --ks-pass pass:android --key-pass pass:android --out Groen-op-de-Balans-v3.0.apk aligned.apk
+          APK=Groen-op-de-Balans-v3.0.apk
+          $ANDROID_HOME/build-tools/35.0.0/apksigner verify --verbose --print-certs "$APK" | tee signature-validation.txt
+          $ANDROID_HOME/build-tools/35.0.0/aapt dump badging "$APK" | tee badging.txt
+          grep -q "package: name='nl.groenstad.groenopdebalans.app' versionCode='4' versionName='3.0'" badging.txt
+          unzip -t "$APK" | tee zip-validation.txt
+          unzip -l "$APK" | grep -q 'assets/groen_op_de_balans.pdf'
+          unzip -l "$APK" | grep -q 'assets/search_index.json'
+          if $ANDROID_HOME/build-tools/35.0.0/aapt dump permissions "$APK" | grep -q 'uses-permission'; then
+            echo 'Unexpected Android permission declared' >&2
+            exit 1
+          fi
+          sha256sum Groen-op-de-Balans-v3.0.apk | tee sha256.txt
+          {
+            echo 'Groen op de Balans v3.0 - testrapport'
+            echo 'PASS: regulier Android Gradle/AAPT2/D8-buildproces'
+            echo 'PASS: reproduceerbare handtekening voor toekomstige v3-updates'
+            echo 'PASS: APK-handtekening en ZIP-integriteit'
+            echo 'PASS: 156 PDF-pagina’s offline opgenomen'
+            echo 'PASS: 18 hoofdstukverwijzingen gevalideerd tegen PDF-tekst'
+            echo 'PASS: volledige offline zoekindex aanwezig'
+            echo 'PASS: geen Android-permissies gedeclareerd'
+            cat sha256.txt
+          } > test-report.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Groen-op-de-Balans-v3.0
+          path: |
+            Groen-op-de-Balans-v3.0.apk
+            test-report.txt
+            content-validation.txt
+            signature-validation.txt
+            badging.txt
+            sha256.txt
+          retention-days: 14
