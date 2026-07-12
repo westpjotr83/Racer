@@ -3,14 +3,15 @@
     <application
         android:allowBackup="true"
         android:fullBackupContent="false"
+        android:extractNativeLibs="false"
         android:icon="@drawable/ic_launcher"
         android:label="Groen op de Balans"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
         <activity
-            android:name=".MainActivity"
-            android:screenOrientation="unspecified"
-            android:exported="true">
+            android:name="nl.groenstad.groenopdebalans.MainActivity"
+            android:exported="true"
+            android:screenOrientation="unspecified">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
