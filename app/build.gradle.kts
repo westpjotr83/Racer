@@ -7,17 +7,16 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "nl.groenstad.groenopdebalans"
+        applicationId = "nl.groenstad.groenopdebalans.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 3
-        versionName = "2.0"
+        versionCode = 4
+        versionName = "3.0"
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
-            signingConfig = signingConfigs.getByName("debug")
         }
     }
 
