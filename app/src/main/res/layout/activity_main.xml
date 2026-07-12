@@ -1,16 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:background="#F4F7F2">
 
     <LinearLayout
+        android:id="@+id/topBar"
         android:layout_width="match_parent"
-        android:layout_height="64dp"
+        android:layout_height="wrap_content"
+        android:minHeight="64dp"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingHorizontal="12dp"
+        android:paddingStart="10dp"
+        android:paddingTop="6dp"
+        android:paddingEnd="10dp"
+        android:paddingBottom="6dp"
         android:background="#123D2A">
 
         <ImageButton
@@ -18,7 +24,7 @@
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:background="?android:attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Inhoud"
+            android:contentDescription="Menu"
             android:src="@android:drawable/ic_menu_sort_by_size"
             android:tint="#FFFFFF" />
 
@@ -28,18 +34,23 @@
             android:layout_weight="1"
             android:orientation="vertical"
             android:paddingStart="8dp">
+
             <TextView
+                android:id="@+id/appTitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Groen op de Balans"
                 android:textColor="#FFFFFF"
                 android:textSize="19sp"
                 android:textStyle="bold" />
+
             <TextView
                 android:id="@+id/pageTitle"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Pagina 1"
+                android:maxLines="2"
+                android:ellipsize="end"
+                android:text="Ontdek de maatschappelijke waarde van groen"
                 android:textColor="#CDE6D2"
                 android:textSize="12sp" />
         </LinearLayout>
@@ -51,51 +62,306 @@
             android:background="?android:attr/selectableItemBackgroundBorderless"
             android:contentDescription="Bladwijzer"
             android:src="@android:drawable/btn_star_big_off"
-            android:tint="#FFFFFF" />
+            android:tint="#FFFFFF"
+            android:visibility="gone" />
     </LinearLayout>
 
     <FrameLayout
+        android:id="@+id/contentHost"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1">
-        <nl.groenstad.groenopdebalans.PdfPageView
-            android:id="@+id/pdfView"
+
+        <ScrollView
+            android:id="@+id/homeScreen"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:padding="10dp" />
-        <ProgressBar
-            android:id="@+id/progress"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_gravity="center" />
+            android:fillViewport="true">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Van boek naar praktische kennisbank"
+                    android:textColor="#123D2A"
+                    android:textSize="26sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="Doorzoek alle 156 pagina's, ontdek 23 maatschappelijke baten en spring direct naar het relevante hoofdstuk. Alles werkt offline."
+                    android:textColor="#425248"
+                    android:textSize="16sp"
+                    android:lineSpacingExtra="3dp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="18dp"
+                    android:orientation="horizontal"
+                    android:weightSum="3">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:gravity="center"
+                        android:padding="12dp"
+                        android:text="23\nBATEN"
+                        android:textColor="#123D2A"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:gravity="center"
+                        android:padding="12dp"
+                        android:text="17\nHOOFDSTUKKEN"
+                        android:textColor="#123D2A"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:gravity="center"
+                        android:padding="12dp"
+                        android:text="156\nPAGINA'S"
+                        android:textColor="#123D2A"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <Button
+                    android:id="@+id/continueButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:layout_marginTop="12dp"
+                    android:text="Verder lezen"
+                    android:textAllCaps="false"
+                    android:textSize="16sp" />
+
+                <Button
+                    android:id="@+id/calculatorButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:layout_marginTop="8dp"
+                    android:text="Indicatieve groenrekentool"
+                    android:textAllCaps="false"
+                    android:textSize="16sp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="24dp"
+                    android:text="Maatschappelijke baten"
+                    android:textColor="#123D2A"
+                    android:textSize="22sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Filter op thema. Tik op een kaart om naar de relevante passage in het boek te gaan."
+                    android:textColor="#5A675F"
+                    android:textSize="14sp" />
+
+                <Spinner
+                    android:id="@+id/categorySpinner"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:layout_marginTop="10dp" />
+
+                <LinearLayout
+                    android:id="@+id/benefitContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
+            </LinearLayout>
+        </ScrollView>
+
+        <LinearLayout
+            android:id="@+id/searchScreen"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:padding="14dp"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Zoek in het volledige boek"
+                android:textColor="#123D2A"
+                android:textSize="24sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Zoek bijvoorbeeld op wateroverlast, zorgkosten, biodiversiteit, OZB of groene daken."
+                android:textColor="#5A675F"
+                android:textSize="14sp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:orientation="horizontal">
+
+                <EditText
+                    android:id="@+id/searchInput"
+                    android:layout_width="0dp"
+                    android:layout_height="52dp"
+                    android:layout_weight="1"
+                    android:hint="Zoekterm"
+                    android:imeOptions="actionSearch"
+                    android:inputType="text"
+                    android:maxLines="1"
+                    android:paddingHorizontal="12dp" />
+
+                <Button
+                    android:id="@+id/searchButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="52dp"
+                    android:layout_marginStart="8dp"
+                    android:text="Zoeken"
+                    android:textAllCaps="false" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/searchStatus"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="Zoekindex wordt geladen…"
+                android:textColor="#5A675F"
+                android:textSize="13sp" />
+
+            <ListView
+                android:id="@+id/searchResults"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_marginTop="6dp"
+                android:layout_weight="1"
+                android:divider="#D9E2D8"
+                android:dividerHeight="1dp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/readerScreen"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1">
+
+                <nl.groenstad.groenopdebalans.PdfPageView
+                    android:id="@+id/pdfView"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:padding="8dp" />
+
+                <ProgressBar
+                    android:id="@+id/progress"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_gravity="center" />
+            </FrameLayout>
+
+            <LinearLayout
+                android:id="@+id/readerControls"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="60dp"
+                android:gravity="center"
+                android:orientation="horizontal"
+                android:paddingStart="10dp"
+                android:paddingTop="6dp"
+                android:paddingEnd="10dp"
+                android:paddingBottom="6dp"
+                android:background="#FFFFFF">
+
+                <Button
+                    android:id="@+id/previousButton"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_weight="1"
+                    android:text="‹ Vorige"
+                    android:textAllCaps="false" />
+
+                <EditText
+                    android:id="@+id/pageInput"
+                    android:layout_width="86dp"
+                    android:layout_height="48dp"
+                    android:gravity="center"
+                    android:hint="boekpag."
+                    android:imeOptions="actionGo"
+                    android:inputType="number"
+                    android:maxLines="1" />
+
+                <Button
+                    android:id="@+id/nextButton"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_weight="1"
+                    android:text="Volgende ›"
+                    android:textAllCaps="false" />
+            </LinearLayout>
+        </LinearLayout>
     </FrameLayout>
 
     <LinearLayout
+        android:id="@+id/bottomNav"
         android:layout_width="match_parent"
-        android:layout_height="64dp"
+        android:layout_height="wrap_content"
+        android:minHeight="62dp"
         android:gravity="center"
         android:orientation="horizontal"
-        android:paddingHorizontal="12dp"
-        android:background="#FFFFFF">
+        android:paddingStart="8dp"
+        android:paddingTop="5dp"
+        android:paddingEnd="8dp"
+        android:paddingBottom="5dp"
+        android:background="#F7FAF6">
+
         <Button
-            android:id="@+id/previousButton"
+            android:id="@+id/navHome"
             android:layout_width="0dp"
             android:layout_height="48dp"
             android:layout_weight="1"
-            android:text="‹ Vorige" />
-        <EditText
-            android:id="@+id/pageInput"
-            android:layout_width="90dp"
-            android:layout_height="48dp"
-            android:gravity="center"
-            android:inputType="number"
-            android:maxLines="1"
-            android:text="1" />
+            android:text="Ontdek"
+            android:textAllCaps="false" />
+
         <Button
-            android:id="@+id/nextButton"
+            android:id="@+id/navSearch"
             android:layout_width="0dp"
             android:layout_height="48dp"
             android:layout_weight="1"
-            android:text="Volgende ›" />
+            android:text="Zoeken"
+            android:textAllCaps="false" />
+
+        <Button
+            android:id="@+id/navReader"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:text="Lezen"
+            android:textAllCaps="false" />
     </LinearLayout>
 </LinearLayout>
