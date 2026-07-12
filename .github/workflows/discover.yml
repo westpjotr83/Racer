@@ -1,0 +1,37 @@
+name: Discover green book
+on:
+  push:
+    paths:
+      - '.github/workflows/discover.yml'
+  workflow_dispatch:
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch page and find document links
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python3 - <<'PY'
+          import re, requests
+          from urllib.parse import urljoin
+          url='https://degroenestad.nl/flipbook/groen-op-de-balans/'
+          r=requests.get(url,timeout=60)
+          print('STATUS',r.status_code,'LEN',len(r.content),'TYPE',r.headers.get('content-type'))
+          open('/tmp/page.html','wb').write(r.content)
+          text=r.text
+          patterns=[r'https?://[^\"\'<> ]+', r'(?:src|href)=[\"\']([^\"\']+)', r'[^\"\' ]+\.pdf(?:\?[^\"\' ]*)?']
+          found=[]
+          for pat in patterns:
+              for x in re.findall(pat,text,re.I):
+                  if isinstance(x,tuple): x=x[0]
+                  u=urljoin(url,x)
+                  if u not in found: found.append(u)
+          for u in found:
+              if any(k in u.lower() for k in ['pdf','flip','book','upload','document']):
+                  print('CANDIDATE',u)
+          print('--- relevant source lines ---')
+          for line in text.splitlines():
+              if any(k in line.lower() for k in ['pdf','iframe','flipbook','real3d','dflip','flowpaper','dearflip']):
+                  print(line[:2000])
+          PY
