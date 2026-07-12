@@ -1,0 +1,53 @@
+name: Build and install-test Android APK
+on:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+      - name: Download official source PDF
+        run: |
+          mkdir -p app/src/main/assets
+          curl -L --fail --retry 3 -o app/src/main/assets/groen_op_de_balans.pdf https://degroenestad.nl/wp-content/uploads/De-Groene-Stad-Groen-op-de-Balans.pdf
+          test $(stat -c%s app/src/main/assets/groen_op_de_balans.pdf) -gt 10000000
+          file app/src/main/assets/groen_op_de_balans.pdf | grep -q PDF
+      - name: Build release APK
+        run: gradle --no-daemon clean assembleRelease
+      - name: Verify APK
+        run: |
+          APK=app/build/outputs/apk/release/app-release.apk
+          test -f "$APK"
+          $ANDROID_HOME/build-tools/35.0.0/apksigner verify --verbose --print-certs "$APK"
+          $ANDROID_HOME/build-tools/35.0.0/aapt dump badging "$APK"
+          unzip -t "$APK"
+          cp "$APK" Groen-op-de-Balans-v2.0.apk
+      - name: Install and launch in Android emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          script: |
+            adb install -r Groen-op-de-Balans-v2.0.apk
+            adb shell am start -W -n nl.groenstad.groenopdebalans/.MainActivity
+            sleep 8
+            adb shell pidof nl.groenstad.groenopdebalans
+            adb shell dumpsys activity activities | grep -q nl.groenstad.groenopdebalans
+            adb logcat -d | grep -E 'FATAL EXCEPTION|AndroidRuntime' && exit 1 || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Groen-op-de-Balans-v2.0
+          path: Groen-op-de-Balans-v2.0.apk
+          retention-days: 7
