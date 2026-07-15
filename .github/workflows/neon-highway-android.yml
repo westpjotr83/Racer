@@ -58,6 +58,25 @@ jobs:
           grep -q "versionName='1.1'" apk-badging.txt
           "$BUILD_TOOLS/apksigner" verify --verbose --print-certs "$APK" | tee apk-signature.txt
 
+      - name: Package verified APK
+        shell: bash
+        run: |
+          APK="neon-highway/app/build/outputs/apk/debug/app-debug.apk"
+          cp "$APK" NeonHighway-v1.1.apk
+          sha256sum NeonHighway-v1.1.apk | tee NeonHighway-v1.1.sha256
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: NeonHighway-v1.1-APK
+          path: |
+            NeonHighway-v1.1.apk
+            NeonHighway-v1.1.sha256
+            apk-badging.txt
+            apk-signature.txt
+          if-no-files-found: error
+          retention-days: 30
+
       - name: Boot emulator and exercise app startup
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -81,13 +100,6 @@ jobs:
               exit 1
             fi
 
-      - name: Package verified APK
-        shell: bash
-        run: |
-          APK="neon-highway/app/build/outputs/apk/debug/app-debug.apk"
-          cp "$APK" NeonHighway-v1.1.apk
-          sha256sum NeonHighway-v1.1.apk | tee NeonHighway-v1.1.sha256
-
       - name: Upload diagnostics
         if: always()
         uses: actions/upload-artifact@v4
@@ -100,16 +112,4 @@ jobs:
             apk-badging.txt
             apk-signature.txt
           if-no-files-found: ignore
-          retention-days: 30
-
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: NeonHighway-v1.1-APK
-          path: |
-            NeonHighway-v1.1.apk
-            NeonHighway-v1.1.sha256
-            apk-badging.txt
-            apk-signature.txt
-          if-no-files-found: error
           retention-days: 30
