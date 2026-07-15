@@ -20,11 +20,18 @@ jobs:
       - name: Reconstruct Android project
         shell: bash
         run: |
-          cat neon-highway-project.part* | base64 --decode > /tmp/neon-highway-project.tgz
+          cat neon-highway-project.part0[0-4] | base64 --decode > /tmp/neon-highway-project.tgz
           echo "1968c84deda490312f56981b2a90f8872f69a04bfbe62b2fab3a19486df3c8f2  /tmp/neon-highway-project.tgz" | sha256sum --check
           mkdir -p neon-highway
           tar -xzf /tmp/neon-highway-project.tgz -C neon-highway
           test -f neon-highway/app/src/main/java/com/peter/neonhighway/GameView.java
+
+      - name: Apply v1.1 crash hardening
+        shell: bash
+        run: |
+          python3 apply-neon-v11-fixes.py neon-highway
+          grep -q "versionName '1.1'" neon-highway/app/build.gradle
+          grep -q "releaseOutput" neon-highway/app/src/main/java/com/peter/neonhighway/SynthAudio.java
 
       - name: Set up Java 17
         uses: actions/setup-java@v4
@@ -47,6 +54,8 @@ jobs:
           test -s "$APK"
           BUILD_TOOLS="$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -1)"
           "$BUILD_TOOLS/aapt" dump badging "$APK" | tee apk-badging.txt
+          grep -q "versionCode='2'" apk-badging.txt
+          grep -q "versionName='1.1'" apk-badging.txt
           "$BUILD_TOOLS/apksigner" verify --verbose --print-certs "$APK" | tee apk-signature.txt
 
       - name: Boot emulator and exercise app startup
@@ -56,16 +65,18 @@ jobs:
           arch: x86_64
           profile: pixel_6
           disable-animations: true
-          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -no-boot-anim -camera-back none
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -no-boot-anim -camera-back none -camera-front none
           script: |
             APK="neon-highway/app/build/outputs/apk/debug/app-debug.apk"
             adb install -r "$APK"
             adb logcat -c
-            adb shell am start -W -n com.peter.neonhighway/.MainActivity
-            sleep 10
-            adb logcat -d > logcat-startup.txt
+            adb shell am start -W -n com.peter.neonhighway/.MainActivity | tee activity-start.txt
+            sleep 12
+            adb shell dumpsys activity activities | grep -q "com.peter.neonhighway/.MainActivity"
             adb shell pidof com.peter.neonhighway
-            if grep -E "FATAL EXCEPTION|Process: com\.peter\.neonhighway" logcat-startup.txt; then
+            adb exec-out screencap -p > emulator-startup.png
+            adb logcat -d > logcat-startup.txt
+            if grep -E "FATAL EXCEPTION|Process: com\.peter\.neonhighway|ANR in com\.peter\.neonhighway" logcat-startup.txt; then
               cat logcat-startup.txt
               exit 1
             fi
@@ -74,16 +85,18 @@ jobs:
         shell: bash
         run: |
           APK="neon-highway/app/build/outputs/apk/debug/app-debug.apk"
-          cp "$APK" NeonHighway-v1.0.apk
-          sha256sum NeonHighway-v1.0.apk | tee NeonHighway-v1.0.sha256
+          cp "$APK" NeonHighway-v1.1.apk
+          sha256sum NeonHighway-v1.1.apk | tee NeonHighway-v1.1.sha256
 
       - name: Upload diagnostics
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: NeonHighway-diagnostics
+          name: NeonHighway-v1.1-diagnostics
           path: |
+            activity-start.txt
             logcat-startup.txt
+            emulator-startup.png
             apk-badging.txt
             apk-signature.txt
           if-no-files-found: ignore
@@ -92,10 +105,10 @@ jobs:
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: NeonHighway-APK
+          name: NeonHighway-v1.1-APK
           path: |
-            NeonHighway-v1.0.apk
-            NeonHighway-v1.0.sha256
+            NeonHighway-v1.1.apk
+            NeonHighway-v1.1.sha256
             apk-badging.txt
             apk-signature.txt
           if-no-files-found: error
