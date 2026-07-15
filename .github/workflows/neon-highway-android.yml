@@ -1,0 +1,64 @@
+name: Build Neon Highway APK
+
+on:
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Reconstruct Android project
+        shell: bash
+        run: |
+          cat neon-highway-project.part* | base64 --decode > /tmp/neon-highway-project.tgz
+          echo "1968c84deda490312f56981b2a90f8872f69a04bfbe62b2fab3a19486df3c8f2  /tmp/neon-highway-project.tgz" | sha256sum --check
+          mkdir -p neon-highway
+          tar -xzf /tmp/neon-highway-project.tgz -C neon-highway
+          test -f neon-highway/app/src/main/java/com/peter/neonhighway/GameView.java
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.10.2"
+
+      - name: Build installable APK
+        run: gradle -p neon-highway --no-daemon :app:assembleDebug
+
+      - name: Verify package and signature
+        shell: bash
+        run: |
+          APK="neon-highway/app/build/outputs/apk/debug/app-debug.apk"
+          test -s "$APK"
+          BUILD_TOOLS="$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -1)"
+          "$BUILD_TOOLS/aapt" dump badging "$APK" | tee apk-badging.txt
+          "$BUILD_TOOLS/apksigner" verify --verbose --print-certs "$APK" | tee apk-signature.txt
+          cp "$APK" NeonHighway-v1.0.apk
+          sha256sum NeonHighway-v1.0.apk | tee NeonHighway-v1.0.sha256
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: NeonHighway-APK
+          path: |
+            NeonHighway-v1.0.apk
+            NeonHighway-v1.0.sha256
+            apk-badging.txt
+            apk-signature.txt
+          if-no-files-found: error
+          retention-days: 30
